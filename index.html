@@ -1,0 +1,779 @@
+<title>IRレポート配信 進捗ダッシュボード</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Old+Mincho:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap">
+<style>
+:root{
+  --navy:#1C2951; --red:#8b2332; --ink:#1a1a1a; --muted:#6b6b6b;
+  --rule:#B7BFC4; --rule-soft:#DCE2E6; --band:#D9E2E8; --group:#EFF3F5;
+  --ground:#F2F5F7; --panel:#FFFFFF; --panel-2:#F8FAFB;
+  --done:#1C2951; --wip:#7B93B5; --todo:#CBD5DB; --late:#8b2332; --late-soft:#D9B6BA;
+  --bolt:#8b2332; --bolt-old:#A9B4BE;
+  --mincho:"Zen Old Mincho",'BIZ UDMincho','Yu Mincho',serif;
+  --gothic:"Noto Sans JP",'BIZ UDGothic','Hiragino Sans',sans-serif;
+  --shadow:0 1px 2px rgba(28,41,81,.06);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --navy:#93ADD3; --red:#CE7A80; --ink:#E7EAEE; --muted:#9BA5AE;
+    --rule:#3B454E; --rule-soft:#2C343B; --band:#232D36; --group:#1D252C;
+    --ground:#14181C; --panel:#1B2127; --panel-2:#1F262D;
+    --done:#93ADD3; --wip:#5B769D; --todo:#3A444C; --late:#CE7A80; --late-soft:#6A3F44;
+    --bolt:#CE7A80; --bolt-old:#4B565F;
+    --shadow:0 1px 2px rgba(0,0,0,.4);
+  }
+}
+:root[data-theme="dark"]{
+  --navy:#93ADD3; --red:#CE7A80; --ink:#E7EAEE; --muted:#9BA5AE;
+  --rule:#3B454E; --rule-soft:#2C343B; --band:#232D36; --group:#1D252C;
+  --ground:#14181C; --panel:#1B2127; --panel-2:#1F262D;
+  --done:#93ADD3; --wip:#5B769D; --todo:#3A444C; --late:#CE7A80; --late-soft:#6A3F44;
+  --bolt:#CE7A80; --bolt-old:#4B565F;
+  --shadow:0 1px 2px rgba(0,0,0,.4);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--gothic);
+  font-size:14px;line-height:1.7;-webkit-font-smoothing:antialiased;font-feature-settings:"palt" 1}
+.wrap{max-width:1280px;margin:0 auto;padding-inline:20px;padding-block:0 56px}
+h1,h2,h3{font-family:var(--mincho);font-weight:600;text-wrap:balance;margin:0}
+.num{font-variant-numeric:tabular-nums}
+
+/* ── ヘッダ帯 ── */
+.masthead{background:var(--navy);color:#fff;margin-bottom:28px}
+:root[data-theme="dark"] .masthead,
+:root:not([data-theme="light"]) .masthead{}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .masthead{background:#1A2330}}
+:root[data-theme="dark"] .masthead{background:#1A2330}
+.masthead .wrap{padding-block:22px 20px}
+.mh-top{display:flex;flex-wrap:wrap;align-items:flex-end;gap:14px 24px;justify-content:space-between}
+.mh-title{font-family:var(--mincho);font-size:25px;font-weight:600;letter-spacing:.04em;color:#fff;line-height:1.35}
+.mh-sub{font-size:12px;color:#C3CEE2;letter-spacing:.06em;margin-top:3px}
+.mh-meta{display:flex;gap:26px;flex-wrap:wrap}
+.mh-meta div{font-size:11px;color:#A9B8D2;letter-spacing:.08em}
+.mh-meta strong{display:block;font-size:14px;color:#fff;font-weight:500;letter-spacing:.02em;margin-top:1px}
+
+/* ── セクション ── */
+section{margin-bottom:34px}
+.sec-head{display:flex;align-items:baseline;gap:12px;border-bottom:1.5px solid var(--navy);padding-bottom:6px;margin-bottom:16px}
+.sec-no{font-family:var(--mincho);font-size:12px;color:var(--navy);letter-spacing:.2em;flex:none}
+.sec-head h2{font-size:18px;color:var(--ink)}
+.sec-note{margin-left:auto;font-size:11.5px;color:var(--muted);text-align:right}
+
+/* ── サマリ ── */
+.summary{display:grid;grid-template-columns:minmax(240px,1fr) minmax(0,2.1fr);gap:18px;align-items:start}
+.tally{background:var(--panel);border:1px solid var(--rule-soft);box-shadow:var(--shadow)}
+.tally-main{padding:18px 20px 14px;border-bottom:1px solid var(--rule-soft)}
+.tally-label{font-size:11px;letter-spacing:.12em;color:var(--muted)}
+.tally-big{font-family:var(--mincho);font-size:46px;line-height:1;color:var(--navy);font-variant-numeric:tabular-nums;margin-top:6px}
+.tally-big small{font-size:19px;color:var(--muted);font-weight:400;margin-left:2px}
+.tally-rows{display:grid}
+.tally-rows div{display:flex;justify-content:space-between;align-items:baseline;padding:8px 20px;font-size:13px;border-bottom:1px solid var(--rule-soft)}
+.tally-rows div:last-child{border-bottom:0}
+.tally-rows span:last-child{font-variant-numeric:tabular-nums;font-weight:500}
+.swatch{width:9px;height:9px;display:inline-block;margin-right:7px;vertical-align:middle}
+
+.tbl-wrap{overflow-x:auto;max-width:100%}
+table.grid{width:100%;min-width:440px;border-collapse:collapse;background:var(--panel);box-shadow:var(--shadow)}
+table.grid th,table.grid td{padding:7px 10px;text-align:left;border-bottom:1px solid var(--rule-soft);font-size:13px}
+table.grid thead th{background:var(--band);color:var(--ink);font-size:11px;font-weight:500;letter-spacing:.1em;
+  border-bottom:1px solid var(--rule);white-space:nowrap}
+table.grid td.n,table.grid th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+table.grid tbody tr:hover{background:var(--panel-2)}
+.ph-code{font-family:var(--mincho);font-weight:600;color:var(--navy);font-size:15px}
+.bar{height:11px;background:var(--todo);display:flex;min-width:110px}
+.bar i{display:block;height:100%}
+.frac{font-variant-numeric:tabular-nums}
+.frac b{font-weight:600;color:var(--navy)}
+
+/* ── 工程表 ── */
+.panel{background:var(--panel);border:1px solid var(--rule-soft);box-shadow:var(--shadow);padding:18px 20px}
+.notice{border-left:3px solid var(--red);background:var(--panel);padding:14px 18px;box-shadow:var(--shadow)}
+.notice h3{font-size:14.5px;color:var(--red);margin-bottom:4px}
+.notice p{margin:0;font-size:13px;color:var(--ink)}
+.notice p+p{margin-top:6px}
+
+.wavewrap{overflow-x:auto}
+table.wave{border-collapse:collapse;width:100%;min-width:900px;background:var(--panel)}
+table.wave th,table.wave td{border:1px solid var(--rule-soft);vertical-align:top;padding:6px}
+table.wave thead th{background:var(--band);font-size:11px;font-weight:500;letter-spacing:.06em;
+  text-align:center;white-space:nowrap;border-bottom:1px solid var(--rule)}
+table.wave tbody th{background:var(--group);font-size:12px;font-weight:500;text-align:left;
+  white-space:nowrap;width:1%;position:sticky;left:0;z-index:1}
+table.wave tbody th em{font-style:normal;font-family:var(--mincho);color:var(--navy);font-weight:600;margin-right:6px}
+.chips{display:flex;flex-wrap:wrap;gap:3px}
+.chip{font-size:10.5px;font-variant-numeric:tabular-nums;letter-spacing:.02em;
+  padding:1px 5px;border:1px solid var(--rule);color:var(--ink);background:var(--panel);cursor:default;white-space:nowrap}
+.chip.ready{border-color:var(--navy);color:var(--navy);font-weight:600}
+.chip.done{background:var(--done);border-color:var(--done);color:var(--panel)}
+.chip.wip{background:var(--wip);border-color:var(--wip);color:#fff}
+.chip.late{border-color:var(--late);color:var(--late);font-weight:600}
+
+.gantt{overflow-x:auto;position:relative}
+.gantt table{border-collapse:collapse;table-layout:fixed;width:100%;min-width:820px}
+.gantt th,.gantt td{border-bottom:1px solid var(--rule-soft);padding:0}
+.g-name{width:300px;max-width:300px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  padding:3px 12px 3px 2px;font-size:12px;position:sticky;left:0;background:var(--panel);z-index:2}
+.g-track{position:relative}
+.g-id{font-variant-numeric:tabular-nums;color:var(--muted);margin-right:8px;font-size:11px}
+.g-cell{position:relative;height:24px}
+.g-plan{position:absolute;top:5px;height:5px;border:1px solid var(--navy);background:transparent}
+.g-act{position:absolute;top:12px;height:6px;background:var(--done)}
+.g-act.wip{background:var(--wip)}
+.g-act.late{background:var(--late)}
+
+/* ── 懸案 ── */
+.issues{display:grid;grid-template-columns:minmax(220px,.85fr) minmax(0,2fr);gap:18px;align-items:start}
+.cause{background:var(--panel);border:1px solid var(--rule-soft);box-shadow:var(--shadow);padding:16px 18px}
+.cause h3{font-size:13.5px;margin-bottom:12px;color:var(--ink)}
+.cause-row{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center;margin-bottom:9px}
+.cause-row span{font-size:12px}
+.cause-row b{font-variant-numeric:tabular-nums;font-size:13px;color:var(--navy)}
+.cause-bar{grid-column:1/-1;height:7px;background:var(--group)}
+.cause-bar i{display:block;height:100%;background:var(--navy)}
+.cause-bar.hot i{background:var(--red)}
+.empty{color:var(--muted);font-size:12.5px;padding:10px 0}
+.tag{display:inline-block;font-size:10.5px;padding:1px 6px;border:1px solid var(--rule);color:var(--muted);white-space:nowrap}
+.tag.stall{border-color:var(--late);color:var(--late)}
+
+/* ── 懸案サマリ帯 ── */
+.issue-tally{display:flex;flex-wrap:wrap;gap:0;border:1px solid var(--rule-soft);background:var(--panel);
+  box-shadow:var(--shadow);margin-bottom:14px}
+.issue-tally .it{flex:1 1 0;min-width:110px;padding:10px 16px;border-right:1px solid var(--rule-soft);
+  display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.issue-tally .it:last-child{border-right:0}
+.it-k{font-size:11.5px;color:var(--muted);letter-spacing:.04em}
+.it-v{font-family:var(--mincho);font-size:22px;color:var(--navy);font-variant-numeric:tabular-nums;line-height:1}
+.it-v.hot{color:var(--late)}
+
+/* ── 担当者別 ── */
+.owner-note{font-size:11.5px;color:var(--muted);margin:10px 0 0}
+.delta{font-variant-numeric:tabular-nums;font-weight:600}
+.delta.neg{color:var(--late)}
+.delta.zero{color:var(--muted);font-weight:400}
+.delta.pos{color:var(--navy)}
+.unassigned{color:var(--muted);font-style:normal}
+.mx-wrap{overflow-x:auto}
+table.mx{border-collapse:collapse;width:100%;min-width:640px;background:var(--panel);box-shadow:var(--shadow)}
+table.mx th,table.mx td{border-bottom:1px solid var(--rule-soft);padding:6px 8px;font-size:12.5px}
+table.mx thead th{background:var(--band);font-size:10.5px;font-weight:500;letter-spacing:.04em;
+  border-bottom:1px solid var(--rule);text-align:center;white-space:nowrap;line-height:1.35}
+table.mx thead th:first-child{text-align:left}
+table.mx td{text-align:center;font-variant-numeric:tabular-nums}
+table.mx td:first-child,table.mx th:first-child{text-align:left;white-space:nowrap}
+table.mx td.z{color:var(--rule)}
+table.mx td.hot{color:var(--late);font-weight:600}
+table.mx td.tot{font-weight:600;color:var(--navy);border-left:1px solid var(--rule-soft)}
+table.mx tbody tr:hover{background:var(--panel-2)}
+
+/* ── 準備状況 ── */
+.ready-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}
+.ready-card{background:var(--panel);border:1px solid var(--rule-soft);box-shadow:var(--shadow);padding:14px 16px}
+.ready-card .k{font-size:11.5px;letter-spacing:.08em;color:var(--muted)}
+.ready-card .v{font-family:var(--mincho);font-size:27px;color:var(--navy);font-variant-numeric:tabular-nums;line-height:1.2;margin:2px 0 4px}
+.ready-card .v.zero{color:var(--red)}
+.ready-card .m{font-size:11.5px;color:var(--muted);line-height:1.6}
+.ready-card .track{height:5px;background:var(--group);margin-top:8px}
+.ready-card .track i{display:block;height:100%;background:var(--navy)}
+
+/* ── 凡例 ── */
+.legend{border-top:1px solid var(--rule);padding-top:14px;margin-top:38px}
+.legend h3{font-size:13px;letter-spacing:.1em;color:var(--muted);font-family:var(--gothic);font-weight:500;margin-bottom:8px}
+.legend ul{margin:0;padding:0;list-style:none;columns:2;column-gap:34px}
+.legend li{font-size:11.5px;color:var(--muted);line-height:1.75;break-inside:avoid;padding-left:1em;text-indent:-1em}
+.legend li::before{content:"—　"}
+@media (max-width:760px){
+  .summary,.issues{grid-template-columns:minmax(0,1fr)}
+  .legend ul{columns:1}
+  .mh-title{font-size:21px}
+  .wrap{padding-inline:16px}
+}
+
+/* ── 合言葉 ── */
+#gate{position:fixed;inset:0;background:var(--ground);display:flex;align-items:center;
+  justify-content:center;padding:24px;z-index:99}
+#gate .box{width:100%;max-width:400px;background:var(--panel);border:1px solid var(--rule-soft);
+  box-shadow:var(--shadow);padding:34px 30px 28px}
+#gate h1{font-family:var(--mincho);font-size:19px;color:var(--navy);line-height:1.5;margin-bottom:4px}
+#gate .sub{font-size:11.5px;color:var(--muted);letter-spacing:.04em;margin-bottom:22px}
+#gate label{display:block;font-size:11px;letter-spacing:.1em;color:var(--muted);margin-bottom:6px}
+#gate input{width:100%;padding:10px 12px;font-family:var(--gothic);font-size:15px;color:var(--ink);
+  background:var(--panel-2);border:1px solid var(--rule);border-radius:0;letter-spacing:.06em}
+#gate input:focus{outline:2px solid var(--navy);outline-offset:-2px}
+#gate button{width:100%;margin-top:12px;padding:10px;font-family:var(--gothic);font-size:14px;
+  font-weight:500;letter-spacing:.1em;color:#fff;background:var(--navy);border:0;cursor:pointer}
+#gate button:disabled{opacity:.5;cursor:default}
+#gate .msg{min-height:18px;margin-top:10px;font-size:12px;color:var(--late)}
+#gate .foot{margin-top:20px;padding-top:14px;border-top:1px solid var(--rule-soft);
+  font-size:11px;color:var(--muted);line-height:1.7}
+body.locked{overflow:hidden}
+</style>
+
+
+<div id="gate">
+  <div class="box">
+    <h1>IRレポート配信体制の構築<br>進捗ダッシュボード</h1>
+    <div class="sub">日本信達株式会社</div>
+    <form id="gate-form" autocomplete="off">
+      <label for="gate-pw">合言葉</label>
+      <input id="gate-pw" type="password" autocomplete="off" spellcheck="false" autofocus>
+      <button id="gate-go" type="submit">開く</button>
+      <div class="msg" id="gate-msg"></div>
+    </form>
+    <div class="foot">本ページの内容は暗号化されている。合言葉は復号鍵であり、
+      合言葉を通さずに内容を読むことはできない。合言葉は記録されず、再読み込みのたびに入力する。</div>
+  </div>
+</div>
+
+<header class="masthead">
+  <div class="wrap">
+    <div class="mh-top">
+      <div>
+        <div class="mh-title">IRレポート配信体制の構築　進捗ダッシュボード</div>
+        <div class="mh-sub">日本信達株式会社　／　WBS 全90タスク・10フェーズ</div>
+      </div>
+      <div class="mh-meta">
+        <div>版<strong id="m-ver">—</strong></div>
+        <div>計画起点<strong id="m-plan" class="num">—</strong></div>
+        <div>本日<strong id="m-base" class="num">—</strong></div>
+        <div>最終取込<strong id="m-upd" class="num">—</strong></div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <section id="sec-summary">
+    <div class="sec-head">
+      <span class="sec-no">１</span><h2>タスクの進捗要約</h2>
+      <span class="sec-note">完了の判定は終了実績日の記入をもって行う</span>
+    </div>
+    <div class="summary">
+      <div class="tally">
+        <div class="tally-main">
+          <div class="tally-label">完了タスク</div>
+          <div class="tally-big num"><span id="t-done">0</span><small>／<span id="t-all">90</span></small></div>
+        </div>
+        <div class="tally-rows" id="t-rows"></div>
+      </div>
+      <div class="tbl-wrap"><table class="grid" id="phase-table">
+        <thead><tr>
+          <th style="width:1%">記号</th><th>フェーズ</th>
+          <th class="n">完了</th><th class="n">進行中</th><th class="n">未着手</th><th class="n">計</th>
+          <th style="width:24%">構成</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </div>
+  </section>
+
+  <section id="sec-gantt">
+    <div class="sec-head">
+      <span class="sec-no">２</span><h2 id="g-title">工程表</h2>
+      <span class="sec-note" id="g-note"></span>
+    </div>
+    <div id="gantt-host"></div>
+  </section>
+
+  <section id="sec-issues">
+    <div class="sec-head">
+      <span class="sec-no">３</span><h2>懸案管理</h2>
+      <span class="sec-note">停滞要因は事象の分類ではなく、次の一手の宛先である（R-015）</span>
+    </div>
+    <div class="issue-tally" id="issue-tally"></div>
+    <div class="issues">
+      <div class="cause">
+        <h3>停滞要因の分布<span style="font-weight:400;color:var(--muted);font-size:11px">　未解決のみ</span></h3>
+        <div id="cause-rows"></div>
+      </div>
+      <div class="tbl-wrap"><table class="grid" id="issue-table">
+        <thead><tr>
+          <th class="n" style="width:1%">No</th><th style="width:1%">タスク</th><th>懸案事項</th>
+          <th style="width:1%">担当</th><th style="width:1%">ステータス</th>
+          <th style="width:1%">停滞要因</th><th class="n" style="width:1%">経過</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </div>
+  </section>
+
+  <section id="sec-owner">
+    <div class="sec-head">
+      <span class="sec-no">４</span><h2>担当者別のタスク消化（予実）</h2>
+      <span class="sec-note">予定＝終了予定日が本日までに来ている数／実績＝終了実績日が入っている数</span>
+    </div>
+    <div class="tbl-wrap"><table class="grid" id="owner-table">
+      <thead><tr>
+        <th>担当者</th>
+        <th class="n">担当数</th><th class="n">予定消化</th><th class="n">実績消化</th>
+        <th class="n">差</th><th class="n">進行中</th><th class="n">停滞</th>
+        <th style="width:20%">消化の構成</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <p class="owner-note" id="owner-note"></p>
+  </section>
+
+  <section id="sec-matrix">
+    <div class="sec-head">
+      <span class="sec-no">５</span><h2>担当者別の懸案と要因</h2>
+      <span class="sec-note">意思決定待ちは担当ではなく決定権者に上げる（R-016）</span>
+    </div>
+    <div class="mx-wrap"><table class="mx" id="matrix-table">
+      <thead><tr><th>担当</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <p class="owner-note" id="matrix-note"></p>
+  </section>
+
+  <section id="sec-ready">
+    <div class="sec-head">
+      <span class="sec-no">６</span><h2>入力の準備状況</h2>
+      <span class="sec-note">この3項目が埋まった分だけ、上の図が動く</span>
+    </div>
+    <div class="ready-grid" id="ready-host"></div>
+    <p class="owner-note" id="ready-note"></p>
+  </section>
+
+  <div class="legend">
+    <h3>凡例・注意</h3>
+    <ul id="legend-list"></ul>
+  </div>
+</div>
+
+<script>
+const BOOT = {"meta":{},"phases":{},"tasks":[],"owners":[],"causes":[],"statuses":[],"issues":[],"holidays":[],"rules":[]};
+
+const FALLBACK_CAUSES = [];
+const CLOSED = ["完了", "消滅"];   // R-014：未解決＝総数−完了−消滅
+const STALE_DAYS = 30;             // R-018：滞留30日ルール
+const UNASSIGNED = "未割付";
+
+const state = { wbs: BOOT, snapshots: [], updated: null };
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const D = s => { if (!s) return null; const d = new Date(s + "T00:00:00"); return isNaN(d) ? null : d; };
+const fmt = d => d ? `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,"0")}/${String(d.getDate()).padStart(2,"0")}` : "—";
+const DAY = 864e5;
+
+const causes = () => (state.wbs.causes && state.wbs.causes.length) ? state.wbs.causes : FALLBACK_CAUSES;
+const owners = () => (state.wbs.owners && state.wbs.owners.length) ? state.wbs.owners : [];
+const holidays = () => new Set(state.wbs.holidays || []);
+
+/** 計画起点。⑤休日カレンダーの基準日。予定日計算の起点であり、締め日ではない（R-023）。 */
+function planStart(){ return D(state.wbs.meta && state.wbs.meta.baseDate); }
+
+/** 本日。停滞判定と予定消化の締め日。 */
+function refDate(){ const t = new Date(); t.setHours(0,0,0,0); return t; }
+let REF = refDate(), PLAN = planStart();
+
+const status = t => t.ae ? "done" : (t.as_ || t.as) ? "wip" : "todo";
+function stall(t){
+  if (status(t) === "done") return null;
+  const pe = D(t.pe), ps = D(t.ps);
+  if (pe && REF > pe) return { kind:"完了超過", days: Math.round((REF - pe)/DAY) };
+  if (status(t) === "todo" && ps && REF > ps) return { kind:"着手遅延", days: Math.round((REF - ps)/DAY) };
+  return null;
+}
+
+/* ───── 懸案 ───── */
+const allIssues = () => state.wbs.issues || [];
+const openIssues = () => allIssues().filter(i => CLOSED.indexOf(i.status) < 0);
+function elapsed(i){
+  const o = D(i.opened); if (!o) return null;
+  const end = D(i.closed) || REF;
+  return Math.max(0, Math.round((end - o)/DAY));
+}
+
+/* ───── 進捗要約 ───── */
+function renderSummary(){
+  const ts = state.wbs.tasks, ph = state.wbs.phases;
+  const c = { done:0, wip:0, todo:0 };
+  ts.forEach(t => c[status(t)]++);
+  const stalled = ts.filter(t => stall(t)).length;
+
+  $("#t-done").textContent = c.done;
+  $("#t-all").textContent = ts.length;
+  $("#t-rows").innerHTML = [
+    ["進行中", c.wip, "var(--wip)", false],
+    ["未着手", c.todo, "var(--todo)", false],
+    ["うち停滞", stalled, "var(--late)", true],
+    ["決定事項を伴う", ts.filter(t => t.decision).length, null, false]
+  ].map(([l,v,col,hot]) =>
+    `<div><span>${col ? `<i class="swatch" style="background:${col}"></i>` : ""}${l}</span>` +
+    `<span class="num"${hot && v ? ' style="color:var(--late)"' : ""}>${v}</span></div>`).join("");
+
+  $("#phase-table tbody").innerHTML = Object.keys(ph).sort().map(p => {
+    const g = ts.filter(t => t.phase === p);
+    const n = { done:0, wip:0, todo:0 };
+    g.forEach(t => n[status(t)]++);
+    const pct = v => (v / g.length * 100).toFixed(2) + "%";
+    return `<tr>
+      <td class="ph-code">${p}</td><td>${esc(ph[p])}</td>
+      <td class="n frac"><b>${n.done}</b></td>
+      <td class="n">${n.wip || "—"}</td>
+      <td class="n">${n.todo || "—"}</td>
+      <td class="n" style="color:var(--muted)">${g.length}</td>
+      <td><div class="bar" title="完了${n.done}／進行中${n.wip}／未着手${n.todo}">
+        <i style="width:${pct(n.done)};background:var(--done)"></i>
+        <i style="width:${pct(n.wip)};background:var(--wip)"></i></div></td>
+    </tr>`;
+  }).join("");
+}
+
+/* ───── 工程表 ───── */
+function renderSchedule(){
+  const ts = state.wbs.tasks, ph = state.wbs.phases;
+  const dated = ts.filter(t => t.ps && t.pe);
+  const host = $("#gantt-host");
+  const noEffort = ts.filter(t => !t.effort).length;
+
+  if (dated.length === 0){
+    $("#g-title").textContent = "工程表（実施順マトリクス）";
+    $("#g-note").textContent = "予定日が未算出のためガントは描けない。先行タスクIDから求めた波で代替している";
+    const waves = [...new Set(ts.map(t => t.wave).filter(Boolean))].sort((a,b) => a - b);
+    const head = waves.map(w => `<th>波${w}</th>`).join("");
+    const body = Object.keys(ph).sort().map(p => {
+      const cells = waves.map(w => {
+        const g = ts.filter(t => t.phase === p && t.wave === w);
+        if (!g.length) return "<td></td>";
+        return "<td><div class=\"chips\">" + g.map(t => {
+          const ready = !t.pred || !t.pred.length;
+          const cls = status(t) === "done" ? "done" : status(t) === "wip" ? "wip" : ready ? "ready" : "";
+          return `<span class="chip ${cls}" title="${esc(t.name)}">${t.id}</span>`;
+        }).join("") + "</div></td>";
+      }).join("");
+      return `<tr><th><em>${p}</em>${esc(ph[p])}</th>${cells}</tr>`;
+    }).join("");
+
+    host.innerHTML = `
+      <div class="notice" style="margin-bottom:16px">
+        <h3>ガントチャートは予定工数の記入で立ち上がる</h3>
+        <p>開始予定日・終了予定日は入力欄ではなく、予定工数から自動算出される（R-023〜R-025）。
+           起点タスクは計画起点から始まり、後続は先行タスクの終了予定日の翌営業日から始まる。休日は⑤休日カレンダーで除く。</p>
+        <p>いま予定工数が未記入のタスクは <b>${noEffort} / ${ts.length}</b> 件である。
+           工数が入った行から順に、予定バーと進捗線が描かれる。工数の単位は延べ営業日数である（R-022）。</p>
+      </div>
+      <div class="wavewrap"><table class="wave">
+        <thead><tr><th style="text-align:left">フェーズ</th>${head}</tr></thead>
+        <tbody>${body}</tbody>
+      </table></div>
+      <p class="owner-note">
+        紺の枠は先行タスクを持たない着手可能タスクであり、計画起点から始まる行である。
+        波は先行タスクIDから機械的に算出した着手可能な順序であり、同じ波は並行して着手できる。
+        最長経路は C-01→C-03→C-09→C-11→C-14→E-02→E-07→E-08→F-02→F-03／F-04。</p>`;
+    return;
+  }
+
+  /* ── 予定日が出たらガント ── */
+  $("#g-title").textContent = "ガントチャート（予定と実績）";
+  $("#g-note").textContent = "細い枠線＝予定、太い塗り＝実績。点線は本日";
+  const all = [REF];
+  ts.forEach(t => [t.ps, t.pe, t.as_ || t.as, t.ae].forEach(v => { const d = D(v); if (d) all.push(d); }));
+  let min = new Date(Math.min(...all)), max = new Date(Math.max(...all));
+  min.setDate(min.getDate() - min.getDay() + 1 - 7);
+  max.setDate(max.getDate() + 14);
+  const span = Math.max(1, (max - min) / DAY);
+  const X  = d => ((d - min) / DAY) / span * 100;
+  const Xe = d => ((d - min) / DAY + 1) / span * 100;   // 終了日を含めた右端
+
+  const months = [];
+  let cur = new Date(min);
+  while (cur <= max){
+    const next = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
+    months.push({ label: `${cur.getFullYear()}年${cur.getMonth()+1}月`, a: X(cur), b: X(next > max ? max : next) });
+    cur = next;
+  }
+
+  const rows = [];
+  Object.keys(ph).sort().forEach(p => {
+    rows.push(`<tr style="background:var(--group)"><td class="g-name" style="background:var(--group);font-weight:500">
+      <span class="ph-code">${p}</span>　${esc(ph[p])}</td><td class="g-cell"></td></tr>`);
+    ts.filter(t => t.phase === p).forEach(t => {
+      const ps = D(t.ps), pe = D(t.pe), as = D(t.as_ || t.as), ae = D(t.ae);
+      const st = status(t), sl = stall(t);
+      const bar = (a, b) => { const l = X(a), w = Math.max(.35, Xe(b) - l); return `left:${l}%;width:${w}%`; };
+      let bars = "";
+      if (ps && pe) bars += `<div class="g-plan" style="${bar(ps, pe)}" title="予定 ${t.ps}〜${t.pe}"></div>`;
+      if (as){
+        const end = ae || REF;
+        bars += `<div class="g-act ${sl ? "late" : st}" style="${bar(as, end)}"` +
+          ` title="実績 ${t.as_ || t.as}〜${t.ae || "（進行中）"}"></div>`;
+      }
+      const label = `${t.id}　${t.name}${t.owner ? "／" + t.owner : ""}`;
+      rows.push(`<tr><td class="g-name" title="${esc(label)}"><span class="g-id">${t.id}</span>${esc(t.name)}` +
+        (sl ? ` <span class="tag stall">${sl.kind}${sl.days}日</span>` : "") +
+        `</td><td class="g-cell">${bars}</td></tr>`);
+    });
+  });
+
+  host.innerHTML = `<div class="panel" style="padding:14px 0 10px 0"><div class="gantt">
+      <table style="width:100%">
+        <thead><tr>
+          <th class="g-name" style="background:var(--band)"><span style="font-size:11px;letter-spacing:.1em;color:var(--muted);padding-left:10px">タスク</span></th>
+          <th class="g-track" style="background:var(--band);height:22px">${
+            months.map(m => `<span style="position:absolute;left:${m.a}%;width:${m.b-m.a}%;font-size:10.5px;color:var(--muted);border-left:1px solid var(--rule);padding-left:4px;box-sizing:border-box;white-space:nowrap;overflow:hidden">${(m.b-m.a) > 6 ? m.label : ""}</span>`).join("")
+          }</th>
+        </tr></thead>
+        <tbody>${rows.join("")}</tbody>
+      </table>
+      <svg id="bolt" style="position:absolute;left:0;top:0;pointer-events:none;overflow:visible"></svg>
+    </div></div>`;
+  requestAnimationFrame(() => drawRefLine(X));
+}
+
+/** 本日の基準線のみを引く。進捗線（イナズマ線）は表示しない。 */
+function drawRefLine(X){
+  const svg = document.getElementById("bolt");
+  if (!svg) return;
+  const gantt = svg.parentElement, table = gantt.querySelector("table");
+  const head = table.querySelectorAll("thead th");
+  const tRect = table.getBoundingClientRect();
+  const trackRect = head[1] && head[1].getBoundingClientRect();
+  if (!tRect.width || !trackRect || trackRect.width < 2) return;
+  const W = tRect.width, H = table.offsetHeight;
+  const x = (trackRect.left - tRect.left) + X(REF) / 100 * trackRect.width;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.style.width = W + "px";
+  svg.style.height = H + "px";
+  svg.innerHTML = `<line x1="${x.toFixed(1)}" y1="0" x2="${x.toFixed(1)}" y2="${H}" ` +
+    `stroke="var(--muted)" stroke-width="1" stroke-dasharray="3 3"/>` +
+    `<text x="${(x + 6).toFixed(1)}" y="13" font-size="9.5" fill="var(--muted)" ` +
+    `paint-order="stroke" stroke="var(--band)" stroke-width="3.5" ` +
+    `style="font-family:var(--gothic)">本日</text>`;
+}
+
+/* ───── 懸案管理 ───── */
+function renderIssues(){
+  const all = allIssues(), open = openIssues();
+  const by = s => all.filter(i => i.status === s).length;
+
+  $("#issue-tally").innerHTML = [
+    ["懸案総数", all.length, false],
+    ["未解決", open.length, open.length > 0],
+    ["完了", by("完了"), false],
+    ["消滅", by("消滅"), false],
+    [`滞留${STALE_DAYS}日超`, open.filter(i => (elapsed(i) || 0) > STALE_DAYS).length, true]
+  ].map(([l, v, hot]) =>
+    `<div class="it"><span class="it-k">${l}</span><span class="it-v${hot && v ? " hot" : ""}">${v}</span></div>`).join("");
+
+  const CS = causes();
+  const max = Math.max(1, ...CS.map(c => open.filter(i => i.cause === c.name).length));
+  $("#cause-rows").innerHTML = CS.map(c => {
+    const n = open.filter(i => i.cause === c.name).length;
+    return `<div class="cause-row">
+      <span>${esc(c.name)}<br><span style="color:var(--muted);font-size:10.5px">${esc(c.note || "")}</span></span>
+      <b${n ? "" : ' style="color:var(--rule)"'}>${n}</b>
+      <div class="cause-bar${n === max && n > 0 ? " hot" : ""}"><i style="width:${n / max * 100}%"></i></div>
+    </div>`;
+  }).join("");
+
+  const sorted = all.slice().sort((a,b) => (elapsed(b) || 0) - (elapsed(a) || 0));
+  $("#issue-table tbody").innerHTML = sorted.length ? sorted.map(i => {
+    const e = elapsed(i), closed = CLOSED.indexOf(i.status) >= 0, stale = !closed && e > STALE_DAYS;
+    return `<tr${closed ? ' style="color:var(--muted)"' : ""}>
+      <td class="n">${i.no == null ? "" : esc(i.no)}</td>
+      <td class="num" style="white-space:nowrap">${esc(i.taskId || "―")}</td>
+      <td>${esc(i.title)}</td>
+      <td style="white-space:nowrap">${esc(i.owner || "—")}</td>
+      <td><span class="tag">${esc(i.status || "未記入")}</span></td>
+      <td><span class="tag${i.cause === "意思決定待ち" ? " stall" : ""}">${esc(i.cause || "―")}</span></td>
+      <td class="n"${stale ? ' style="color:var(--late);font-weight:600"' : ""}>${e == null ? "—" : e + "日"}</td>
+    </tr>`;
+  }).join("")
+    : `<tr><td colspan="7" class="empty">③懸案管理シートに起票された懸案はまだ無い。
+       着手できない、決められない、前提が崩れた——のいずれかに該当した時点で起票する。</td></tr>`;
+}
+
+/* ───── 担当者別：タスク消化の予実 ───── */
+function renderOwners(){
+  const ts = state.wbs.tasks;
+  const map = new Map();
+  const blank = () => ({ total:0, planDone:0, actDone:0, wip:0, stall:0, noPlan:0 });
+  owners().forEach(n => map.set(n, Object.assign({ name:n }, blank())));
+  ts.forEach(t => {
+    const k = t.owner || UNASSIGNED;
+    if (!map.has(k)) map.set(k, Object.assign({ name:k }, blank()));
+    const o = map.get(k);
+    o.total++;
+    const pe = D(t.pe);
+    if (pe) { if (pe <= REF) o.planDone++; } else o.noPlan++;
+    if (t.ae) o.actDone++;
+    else if (t.as_ || t.as) o.wip++;
+    if (stall(t)) o.stall++;
+  });
+  const rows = [...map.values()].sort((a,b) =>
+    a.name === UNASSIGNED ? 1 : b.name === UNASSIGNED ? -1 : 0);
+  const anyPlan = ts.some(t => t.pe);
+
+  $("#owner-table tbody").innerHTML = rows.map(o => {
+    const none = o.total === 0;
+    const d = o.actDone - o.planDone;
+    const undef = !anyPlan || o.noPlan === o.total;
+    const dCls = undef ? "zero" : d < 0 ? "neg" : d > 0 ? "pos" : "zero";
+    const pct = v => o.total ? (v / o.total * 100).toFixed(2) + "%" : "0%";
+    return `<tr${none ? ' style="color:var(--muted)"' : ""}>
+      <td${o.name === UNASSIGNED ? ' class="unassigned"' : ""}>${esc(o.name)}</td>
+      <td class="n">${o.total || "—"}</td>
+      <td class="n">${undef ? "—" : o.planDone}</td>
+      <td class="n frac">${none ? "—" : `<b>${o.actDone}</b>`}</td>
+      <td class="n delta ${dCls}">${undef ? "—" : (d > 0 ? "+" : "") + d}</td>
+      <td class="n">${o.wip || "—"}</td>
+      <td class="n"${o.stall ? ' style="color:var(--late);font-weight:600"' : ""}>${o.stall || "—"}</td>
+      <td><div class="bar"><i style="width:${pct(o.actDone)};background:var(--done)"></i>
+        <i style="width:${pct(o.wip)};background:var(--wip)"></i></div></td>
+    </tr>`;
+  }).join("");
+
+  const un = map.get(UNASSIGNED);
+  $("#owner-note").innerHTML = un && un.total === ts.length
+    ? `担当者名が 0 / ${ts.length} 件のため、全タスクが「未割付」の一行に集まっている。B-02 の割付が入ると担当者ごとに分解される。
+       担当者名はプルダウンから選ぶ（R-030）。予定消化は終了予定日から算出するため、予定工数が入るまで「—」である。`
+    : `差は「実績消化 − 予定消化」である。負の値は、その担当者が本日時点で終えているはずの数に届いていないことを示す。`;
+}
+
+/* ───── 担当者別：懸案と要因 ───── */
+function renderMatrix(){
+  const open = openIssues(), CS = causes();
+  const names = owners().slice();
+  open.forEach(i => { const n = i.owner || UNASSIGNED; if (names.indexOf(n) < 0) names.push(n); });
+  if (names.indexOf(UNASSIGNED) < 0 && open.some(i => !i.owner)) names.push(UNASSIGNED);
+
+  $("#matrix-table thead").innerHTML = `<tr><th>担当</th>${
+    CS.map(c => `<th>${esc(c.name).replace(/・/, "・<br>")}</th>`).join("")}<th>計</th></tr>`;
+
+  if (!names.length){
+    $("#matrix-table tbody").innerHTML =
+      `<tr><td colspan="${CS.length + 2}" class="empty" style="text-align:left;padding-left:8px">
+        担当者マスタも未解決の懸案も読めていない。③懸案管理シートが取り込まれると行が立つ。</td></tr>`;
+    $("#matrix-note").textContent = "";
+    return;
+  }
+
+  $("#matrix-table tbody").innerHTML = names.map(nm => {
+    const mine = open.filter(i => (i.owner || UNASSIGNED) === nm);
+    const cells = CS.map(c => {
+      const n = mine.filter(i => i.cause === c.name).length;
+      const hot = c.name === "意思決定待ち" && n > 0;
+      return `<td class="${n === 0 ? "z" : hot ? "hot" : ""}">${n === 0 ? "・" : n}</td>`;
+    }).join("");
+    return `<tr${mine.length ? "" : ' style="color:var(--muted)"'}>` +
+      `<td${nm === UNASSIGNED ? ' class="unassigned"' : ""}>${esc(nm)}</td>${cells}` +
+      `<td class="tot">${mine.length || "・"}</td></tr>`;
+  }).join("") + `<tr style="background:var(--group)"><td style="font-weight:500">計</td>${
+      CS.map(c => `<td style="font-weight:500">${open.filter(i => i.cause === c.name).length || "・"}</td>`).join("")
+    }<td class="tot">${open.length || "・"}</td></tr>`;
+
+  $("#matrix-note").textContent = open.length
+    ? "未解決の懸案のみを数えている。意思決定待ちが一人の行に積み上がっていれば、そこが律速である。"
+    : "未解決の懸案はまだ無い。担当者マスタの7名を行として並べてある。起票されるとこの表が埋まる。";
+}
+
+/* ───── 入力の準備状況 ───── */
+function renderReady(){
+  const ts = state.wbs.tasks, n = ts.length;
+  const items = [
+    ["担当者名", ts.filter(t => t.owner).length,
+     "B-02 の割付で記入する。プルダウンから選ぶ（R-030）。第4節・第5節はこれで分解される"],
+    ["予定工数", ts.filter(t => t.effort).length,
+     "延べ営業日数で入れる（R-022）。これが入ると開始・終了予定日が自動算出され、ガントが描ける"],
+    ["開始・終了実績日", ts.filter(t => (t.as_ || t.as) || t.ae).length,
+     "完了判定と進捗線の折れ位置を決める。着手したら開始日、終えたら終了日を入れる"]
+  ];
+  $("#ready-host").innerHTML = items.map(([k,v,m]) => `
+    <div class="ready-card">
+      <div class="k">${k}</div>
+      <div class="v num${v === 0 ? " zero" : ""}">${v}<span style="font-size:15px;color:var(--muted)">／${n}</span></div>
+      <div class="track"><i style="width:${v/n*100}%"></i></div>
+      <div class="m" style="margin-top:8px">${m}</div>
+    </div>`).join("");
+  $("#ready-note").textContent =
+    "開始予定日・終了予定日は入力欄ではない。予定工数と先行タスクIDと⑤休日カレンダーから、②WBS上で自動算出される（R-023〜R-025）。";
+}
+
+/* ───── ヘッダ・凡例 ───── */
+function renderMeta(){
+  const m = state.wbs.meta || {};
+  $("#m-ver").textContent = (m.version || "—").replace(/\s+/g, " ");
+  $("#m-plan").textContent = fmt(PLAN);
+  $("#m-base").textContent = fmt(REF);
+  $("#m-upd").textContent = state.updated || m.importedAt || "内蔵データ";
+}
+
+function renderLegend(){
+  const src = (state.wbs.meta && state.wbs.meta.source) || "WBS_IRレポート配信";
+  $("#legend-list").innerHTML = [
+    `本画面の正は Google ドライブ「IRレポート策定」フォルダの ${src} である。本画面は読み取り専用である。`,
+    "用語の定義と判定基準の正本は④ルールである。本画面の凡例は控えであり、Rxxxは④ルールのIDである。",
+    "基準日は⑤休日カレンダーの値である。停滞判定も予定消化も、この日付を基準に数える。",
+    "完了の判定は終了実績日の記入をもって行う。日付の前後を問わない。進捗率は持たない。",
+    "進行中は開始実績日があり終了実績日がない状態である。",
+    "タスクの停滞は、本日の時点で終了予定日を過ぎて終了実績日がない、または開始予定日を過ぎて開始実績日がない状態を指す。",
+    "開始予定日・終了予定日は入力欄ではなく、予定工数から自動算出される（R-023〜R-025）。",
+    "予定工数の単位は延べ営業日数である（R-022）。空欄の行は予定日を持たない（R-029）。",
+    "波は先行タスクIDから算出した着手可能な順序であり、日付ではない。同じ波は並行して着手できる。",
+    "懸案の未解決は、総数から完了と消滅を引いた数である。保留もステータス未記入も未解決に数える（R-014）。",
+    "未解決の懸案の経過日数は、発生日から本日までの日数である。",
+    "停滞要因は事象の分類ではなく、次の一手の宛先で選ぶ（R-015）。",
+    "意思決定待ちは担当ではなく決定権者に上げる。担当への督促は行わない（R-016）。",
+    `未解決のまま${STALE_DAYS}日を超えた懸案は赤で示す（R-018）。`,
+    "担当者名が未記入のタスクと懸案は「未割付」に集める。割付が入れば自動的に分解される。",
+    "週次スナップショットの記録は継続しているが、進捗線としての表示は行わない。",
+    "数値の更新は取込処理で行う。本画面から②WBSへ書き戻すことはない。"
+  ].map(t => `<li>${esc(t)}</li>`).join("");
+}
+
+function render(){
+  REF = refDate(); PLAN = planStart();
+  renderMeta(); renderSummary(); renderSchedule(); renderIssues();
+  renderOwners(); renderMatrix(); renderReady(); renderLegend();
+}
+addEventListener("resize", () => { clearTimeout(window.__rz); window.__rz = setTimeout(renderSchedule, 200); });
+
+
+const ENC = {"v":1,"iter":250000,"salt":"XReXowH9dbHAkDs/XWJsWg==","nonce":"HcYNhhRciB10Yj+N","gz":1,"ct":"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"};
+const b2u = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+
+async function unlock(pw){
+  const ks = await crypto.subtle.importKey("raw", new TextEncoder().encode(pw), "PBKDF2", false, ["deriveKey"]);
+  const key = await crypto.subtle.deriveKey(
+    { name:"PBKDF2", salt:b2u(ENC.salt), iterations:ENC.iter, hash:"SHA-256" },
+    ks, { name:"AES-GCM", length:256 }, false, ["decrypt"]);
+  let plain = await crypto.subtle.decrypt({ name:"AES-GCM", iv:b2u(ENC.nonce) }, key, b2u(ENC.ct));
+  if (ENC.gz){
+    const ds = new DecompressionStream("gzip");
+    const w = ds.writable.getWriter(); w.write(new Uint8Array(plain)); w.close();
+    plain = await new Response(ds.readable).arrayBuffer();
+  }
+  return JSON.parse(new TextDecoder().decode(plain));
+}
+
+document.body.classList.add("locked");
+document.getElementById("gate-form").addEventListener("submit", async e => {
+  e.preventDefault();
+  const msg = document.getElementById("gate-msg"), btn = document.getElementById("gate-go");
+  const input = document.getElementById("gate-pw");
+  msg.textContent = ""; btn.disabled = true; btn.textContent = "照合中";
+  let data;
+  try { data = await unlock(input.value); }
+  catch(err){
+    msg.textContent = "合言葉が違う。";
+    btn.disabled = false; btn.textContent = "開く"; input.select();
+    return;
+  }
+  try {
+    input.value = "";
+    state.wbs = data.wbs;
+    state.snapshots = (data.snapshots || []).slice().sort((a,b) => b.date < a.date ? -1 : 1);
+    state.updated = (data.wbs.meta && data.wbs.meta.importedAt) || null;
+    document.getElementById("gate").remove();
+    document.body.classList.remove("locked");
+    render();
+  } catch(err) {
+    msg.textContent = "表示に失敗した：" + err.message;
+    console.error(err);
+  }
+});
+
+</script>
