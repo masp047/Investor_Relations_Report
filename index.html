@@ -51,6 +51,9 @@ h1,h2,h3{font-family:var(--mincho);font-weight:600;text-wrap:balance;margin:0}
 .mh-meta{display:flex;gap:26px;flex-wrap:wrap}
 .mh-meta div{font-size:11px;color:#A9B8D2;letter-spacing:.08em}
 .mh-meta strong{display:block;font-size:14px;color:#fff;font-weight:500;letter-spacing:.02em;margin-top:1px}
+.mh-meta .src{max-width:100%}
+.mh-meta .src strong{font-size:13px;word-break:break-all}
+.mh-meta .kind{font-size:10.5px;color:#A9B8D2;font-weight:400;margin-left:3px;white-space:nowrap}
 
 /* ── セクション ── */
 section{margin-bottom:34px}
@@ -232,6 +235,7 @@ body.locked{overflow:hidden}
         <div class="mh-sub">日本信達株式会社　／　WBS 全90タスク・10フェーズ</div>
       </div>
       <div class="mh-meta">
+        <div class="src">元ファイル<strong id="m-src">—</strong></div>
         <div>版<strong id="m-ver">—</strong></div>
         <div>計画起点<strong id="m-plan" class="num">—</strong></div>
         <div>本日<strong id="m-base" class="num">—</strong></div>
@@ -695,6 +699,9 @@ function renderReady(){
 /* ───── ヘッダ・凡例 ───── */
 function renderMeta(){
   const m = state.wbs.meta || {};
+  var _s = String(m.source || "—"), _i = _s.indexOf("（");
+  $("#m-src").innerHTML = _i > 0 ? esc(_s.slice(0,_i)) + '<span class="kind">' + esc(_s.slice(_i)) + '</span>' : esc(_s);
+  $("#m-src").parentElement.title = _s;
   $("#m-ver").textContent = (m.version || "—").replace(/\s+/g, " ");
   $("#m-plan").textContent = fmt(PLAN);
   $("#m-base").textContent = fmt(REF);
